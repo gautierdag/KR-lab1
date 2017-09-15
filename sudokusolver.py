@@ -87,8 +87,6 @@ def solve(grid):
     out = proc.communicate()[0]
     print(out)
 
-
-
     sol = pycosat.solve(clauses, verbose=2)
 
     def read_cell(i, j):
@@ -106,7 +104,7 @@ if __name__ == '__main__':
     from pprint import pprint
 
     # hard Sudoku problem, see Fig. 3 in paper by Weber
-    hard = [[1, 2, 0, 0, 0, 0, 0, 0, 0],
+    hard = [[1, 2, 3, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 3],
             [0, 7, 4, 0, 8, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 3, 0, 0, 2],
@@ -126,3 +124,11 @@ if __name__ == '__main__':
     #         [2, 6, 9, 3, 1, 4, 7, 8, 5],
     #         [5, 4, 8, 7, 6, 9, 2, 3, 1],
     #         [7, 3, 1, 8, 5, 2, 6, 4, 9]] == hard
+
+
+
+# Hypothesis:
+#
+# Increasing the % of known numbers in similary spatially distributed sudoku board,
+# We expect performance (eg: the rate at which backtrack) to increase at
+# the same rate for different board sizes.
