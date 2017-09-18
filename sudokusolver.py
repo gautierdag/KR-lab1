@@ -80,12 +80,12 @@ def solve(grid):
 
 
     temp_str = "cnf = " + repr(clauses) + ";"
-    import subprocess
-    proc = subprocess.Popen(["python", "-c",
-        temp_str + "import pycosat;pycosat.solve(cnf,verbose=5);"],
-        stdout=subprocess.PIPE)
-    out = proc.communicate()[0]
-    print(out)
+    #import subprocess
+    #proc = subprocess.Popen(["python", "-c",
+    #    temp_str + "import pycosat;pycosat.solve(cnf,verbose=5);"],
+    #    stdout=subprocess.PIPE)
+    #out = proc.communicate()[0]
+    #print(out)
 
     sol = pycosat.solve(clauses, verbose=2)
 
