@@ -2,38 +2,35 @@
 The implementation of this Sudoku solver is based on the paper:
     "A SAT-based Sudoku solver" by Tjark Weber
     https://www.lri.fr/~conchon/mpri/weber.pdf
-If you want to understand the code below, in particular the function valid(),
-which calculates the 324 clauses corresponding to 9 cells, you are strongly
-encouraged to read the paper first.  The paper is very short, but contains
-all necessary information.
 """
 import pycosat
+from pprint import pprint
 
-
-def v(i, j, d):
+def v(i, j, d, size):
     """
     Return the number of the variable of cell i, j and digit d,
     which is an integer in the range of 1 to 729 (including).
     """
-    return 81 * (i - 1) + 9 * (j - 1) + d
+    return (size**2) * (i - 1) + size * (j - 1) + d
 
 
-def sudoku_clauses():
+def sudoku_clauses(size):
     """
-    Create the (11745) Sudoku clauses, and return them as a list.
+    Create the Sudoku clauses - depending on the size of the sudoku,
+    (4, 9, 16, 25) and return them as a list.
     Note that these clauses are *independent* of the particular
     Sudoku puzzle at hand.
     """
     res = []
     # for all cells, ensure that the each cell:
-    for i in range(1, 10):
-        for j in range(1, 10):
+    for i in range(1, (size+1)):
+        for j in range(1, (size+1)):
             # denotes (at least) one of the 9 digits (1 clause)
-            res.append([v(i, j, d) for d in range(1, 10)])
+            res.append([v(i, j, d, size) for d in range(1, (size+1))])
             # does not denote two different digits at once (36 clauses)
-            for d in range(1, 10):
-                for dp in range(d + 1, 10):
-                    res.append([-v(i, j, d), -v(i, j, dp)])
+            for d in range(1, (size+1)):
+                for dp in range(d + 1, (size+1)):
+                    res.append([-v(i, j, d, size), -v(i, j, dp, size)])
 
     def valid(cells):
         # Append 324 clauses, corresponding to 9 cells, to the result.
@@ -42,19 +39,43 @@ def sudoku_clauses():
         for i, xi in enumerate(cells):
             for j, xj in enumerate(cells):
                 if i < j:
-                    for d in range(1, 10):
-                        res.append([-v(xi[0], xi[1], d), -v(xj[0], xj[1], d)])
+                    for d in range(1, (size+1)):
+                        res.append([-v(xi[0], xi[1], d, size), -v(xj[0], xj[1], d, size)])
 
     # ensure rows and columns have distinct values
-    for i in range(1, 10):
-        valid([(i, j) for j in range(1, 10)])
-        valid([(j, i) for j in range(1, 10)])
-    # ensure 3x3 sub-grids "regions" have distinct values
-    for i in 1, 4, 7:
-        for j in 1, 4 ,7:
-            valid([(i + k % 3, j + k // 3) for k in range(9)])
+    for i in range(1, (size+1)):
+        valid([(i, j) for j in range(1, (size+1))])
+        valid([(j, i) for j in range(1, (size+1))])
 
-    assert len(res) == 81 * (1 + 36) + 27 * 324
+
+    if size == 4:
+        print(size)
+        for i in 1, 3:
+            for j in 1, 3:
+                valid([(i + k % 2, j + k // 2) for k in range(size)])
+        # assert len(res) == (size**2) * (1 + 36) + 27 * 324
+        print(len(res))
+    elif size == 9:
+        # ensure 3x3 sub-grids "regions" have distinct values
+        for i in 1, 4, 7:
+            for j in 1, 4 ,7:
+                valid([(i + k % 3, j + k // 3) for k in range(size)])
+        print(len(res))
+        assert len(res) == (size**2) * (1 + 36) + 27 * 324
+    elif size == 16:
+        for i in 1, 5, 9, 13:
+            for j in 1, 5, 9, 13:
+                valid([(i + k % 4, j + k // 4) for k in range(size)])
+        print(len(res))
+    elif size == 25:
+        for i in 1, 6, 11, 16, 21:
+            for j in 1, 6, 11, 16, 21:
+                valid([(i + k % 5, j + k // 5) for k in range(size)])
+        print(len(res))
+    else:
+        print(size)
+        raise ValueError("Size of Sudoku Unknown")
+
     return res
 
 
@@ -62,10 +83,10 @@ def solve(grid):
     """
     solve a Sudoku grid inplace
     """
-    clauses = sudoku_clauses()
-    print(clauses[0])
-    for i in range(1, 10):
-        for j in range(1, 10):
+    size = len(grid[0])
+    clauses = sudoku_clauses(size)
+    for i in range(1, (size+1)):
+        for j in range(1, (size+1)):
             d = grid[i - 1][j - 1]
             # For each digit already known, a clause (with one literal).
             # Note:
@@ -73,13 +94,10 @@ def solve(grid):
             #     altogether (which would be more efficient).  However, for
             #     the sake of simplicity, we decided not to do that.
             if d:
-                clauses.append([v(i, j, d)])
+                clauses.append([v(i, j, d, size)])
 
-    # solve the SAT problem
-    # sol = set()
-
-
-    temp_str = "cnf = " + repr(clauses) + ";"
+    # solve the SAT problem using subprocess to capture output as string
+    # temp_str = "cnf = " + repr(clauses) + ";"
     #import subprocess
     #proc = subprocess.Popen(["python", "-c",
     #    temp_str + "import pycosat;pycosat.solve(cnf,verbose=5);"],
@@ -87,48 +105,126 @@ def solve(grid):
     #out = proc.communicate()[0]
     #print(out)
 
-    sol = pycosat.solve(clauses, verbose=2)
+    sol = set(pycosat.solve(clauses, verbose=1))
 
     def read_cell(i, j):
         # return the digit of cell i, j according to the solution
-        for d in range(1, 10):
-            if v(i, j, d) in sol:
+        for d in range(1, (size+1)):
+            if v(i, j, d, size) in sol:
                 return d
 
-    for i in range(1, 10):
-        for j in range(1, 10):
+    for i in range(1, (size+1)):
+        for j in range(1, (size+1)):
             grid[i - 1][j - 1] = read_cell(i, j)
 
 
-if __name__ == '__main__':
-    from pprint import pprint
 
-    # hard Sudoku problem, see Fig. 3 in paper by Weber
-    hard = [[1, 2, 3, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [0, 7, 4, 0, 8, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 3, 0, 0, 2],
-            [0, 8, 0, 0, 0, 0, 0, 1, 0],
-            [6, 0, 0, 5, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 7, 8, 0],
-            [5, 0, 0, 0, 0, 9, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 4, 0]]
-    solve(hard)
-    # pprint(hard)
-    # assert [[1, 2, 6, 4, 3, 7, 9, 5, 8],
-    #         [8, 9, 5, 6, 2, 1, 4, 7, 3],
-    #         [3, 7, 4, 9, 8, 5, 1, 2, 6],
-    #         [4, 5, 7, 1, 9, 3, 8, 6, 2],
-    #         [9, 8, 3, 2, 4, 6, 5, 1, 7],
-    #         [6, 1, 2, 5, 7, 8, 3, 9, 4],
-    #         [2, 6, 9, 3, 1, 4, 7, 8, 5],
-    #         [5, 4, 8, 7, 6, 9, 2, 3, 1],
-    #         [7, 3, 1, 8, 5, 2, 6, 4, 9]] == hard
+normal = [[1, 2, 3, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 3],
+        [0, 7, 4, 0, 8, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 0, 0, 2],
+        [0, 8, 0, 0, 0, 0, 0, 1, 0],
+        [6, 0, 0, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 7, 8, 0],
+        [5, 0, 0, 0, 0, 9, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 4, 0]]
+solve(normal)
+pprint(normal)
 
+easy = [[4, 0, 0, 3],
+        [0, 0, 0, 1],
+        [1, 0, 3, 2],
+        [3, 2, 0, 4]]
+solve(easy)
+pprint(easy)
 
+hard = [[14, 0, 13, 7, 8, 11, 6, 10, 3, 1, 16, 12, 15, 5, 9, 2],
+        [1, 8, 0, 10, 5, 16, 4, 12, 11, 15, 14, 9, 6, 13, 3, 7],
+        [16, 12, 15, 3, 14, 9, 13, 2, 7, 5, 6, 4, 11, 8, 10, 1],
+        [11, 6, 5, 0, 1, 15, 3, 7, 13, 10, 8, 2, 16, 4, 12, 14],
+        [3, 7, 1, 6, 4, 12, 2, 13, 15, 11, 10, 8, 14, 9, 16, 5],
+        [8, 16, 12, 0, 10, 7, 11, 5, 2, 9, 4, 13, 1, 3, 15, 6],
+        [5, 9, 10, 0, 16, 6, 8, 15, 12, 3, 1, 14, 4, 7, 11, 13],
+        [13, 11, 4, 0, 3, 1, 9, 14, 6, 7, 5, 16, 2, 12, 8, 10],
+        [7, 15, 11, 8, 13, 4, 16, 9, 10, 14, 3, 6, 5, 1, 2, 12],
+        [2, 1, 9, 12, 7, 3, 15, 11, 16, 4, 13, 5, 10, 6, 14, 8],
+        [10, 14, 3, 13, 6, 2, 5, 8, 9, 12, 15, 1, 7, 11, 4, 16],
+        [6, 5, 16, 4, 12, 14, 10, 1, 8, 2, 7, 11, 9, 15, 13, 3],
+        [12, 0, 14, 5, 9, 10, 7, 3, 4, 6, 2, 15, 8, 16, 1, 11],
+        [9, 10, 6, 16, 11, 8, 0, 4, 14, 13, 12, 7, 3, 2, 5, 15],
+        [15, 3, 8, 11, 2, 5, 0, 6, 1, 16, 9, 10, 13, 14, 7, 4],
+        [4, 2, 7, 1, 15, 13, 14, 16, 5, 8, 11, 3, 12, 10, 6, 9]]
 
-# Hypothesis:
-#
-# Increasing the % of known numbers in similary spatially distributed sudoku board,
-# We expect performance (eg: the rate at which backtrack) to increase at
-# the same rate for different board sizes.
+solve(hard)
+pprint(hard)
+
+assert [[14, 4, 13, 7, 8, 11, 6, 10, 3, 1, 16, 12, 15, 5, 9, 2],
+        [1, 8, 2, 10, 5, 16, 4, 12, 11, 15, 14, 9, 6, 13, 3, 7],
+        [16, 12, 15, 3, 14, 9, 13, 2, 7, 5, 6, 4, 11, 8, 10, 1],
+        [11, 6, 5, 9, 1, 15, 3, 7, 13, 10, 8, 2, 16, 4, 12, 14],
+        [3, 7, 1, 6, 4, 12, 2, 13, 15, 11, 10, 8, 14, 9, 16, 5],
+        [8, 16, 12, 14, 10, 7, 11, 5, 2, 9, 4, 13, 1, 3, 15, 6],
+        [5, 9, 10, 2, 16, 6, 8, 15, 12, 3, 1, 14, 4, 7, 11, 13],
+        [13, 11, 4, 15, 3, 1, 9, 14, 6, 7, 5, 16, 2, 12, 8, 10],
+        [7, 15, 11, 8, 13, 4, 16, 9, 10, 14, 3, 6, 5, 1, 2, 12],
+        [2, 1, 9, 12, 7, 3, 15, 11, 16, 4, 13, 5, 10, 6, 14, 8],
+        [10, 14, 3, 13, 6, 2, 5, 8, 9, 12, 15, 1, 7, 11, 4, 16],
+        [6, 5, 16, 4, 12, 14, 10, 1, 8, 2, 7, 11, 9, 15, 13, 3],
+        [12, 13, 14, 5, 9, 10, 7, 3, 4, 6, 2, 15, 8, 16, 1, 11],
+        [9, 10, 6, 16, 11, 8, 1, 4, 14, 13, 12, 7, 3, 2, 5, 15],
+        [15, 3, 8, 11, 2, 5, 12, 6, 1, 16, 9, 10, 13, 14, 7, 4],
+        [4, 2, 7, 1, 15, 13, 14, 16, 5, 8, 11, 3, 12, 10, 6, 9]] == hard
+
+veryhard = [[6, 19, 24, 0, 11, 16, 0, 3, 20, 22, 2, 18, 23, 12, 14, 8, 10, 17, 1, 13, 0, 5, 9, 21, 4],
+            [1, 3, 23, 7, 8, 10, 0, 17, 21, 24, 19, 5, 13, 4, 15, 20, 14, 18, 12, 9, 0, 6, 2, 22, 11],
+            [25, 18, 22, 16, 17, 8, 14, 2, 11, 12, 1, 10, 9, 20, 21, 19, 6, 5, 4, 3, 0, 23, 24, 13, 7],
+            [13, 5, 2, 12, 20, 0, 0, 9, 1, 4, 22, 24, 3, 6, 7, 23, 21, 25, 16, 11, 0, 14, 10, 8, 17],
+            [21, 10, 9, 4, 14, 0, 0, 19, 6, 5, 17, 16, 8, 25, 11, 7, 2, 22, 15, 24, 20, 3, 18, 1, 12],
+            [9, 23, 25, 3, 21, 4, 0, 13, 12, 11, 10, 15, 7, 18, 24, 14, 5, 2, 0, 19, 1, 16, 8, 20, 6],
+            [24, 14, 4, 20, 0, 17, 0, 25, 3, 6, 8, 11, 16, 0, 1, 12, 18, 15, 0, 10, 2, 22, 7, 9, 0],
+            [16, 15, 6, 8, 2, 5, 1, 0, 14, 23, 9, 17, 0, 0, 4, 13, 24, 7, 20, 25, 21, 18, 11, 12, 0],
+            [12, 1, 13, 0, 7, 2, 19, 0, 18, 20, 6, 21, 25, 3, 5, 16, 8, 11, 9, 22, 4, 10, 15, 14, 0],
+            [5, 22, 11, 0, 10, 9, 16, 0, 15, 8, 23, 14, 12, 2, 20, 6, 4, 21, 3, 1, 13, 19, 17, 24, 0],
+            [4, 11, 3, 19, 12, 7, 23, 0, 5, 1, 13, 20, 6, 15, 16, 0, 22, 24, 14, 17, 18, 9, 25, 2, 0],
+            [18, 17, 8, 13, 1, 22, 3, 11, 24, 19, 14, 9, 10, 7, 2, 15, 12, 23, 25, 6, 5, 4, 21, 16, 0],
+            [15, 6, 21, 5, 16, 25, 20, 12, 9, 2, 0, 22, 4, 1, 17, 11, 13, 19, 8, 7, 14, 24, 3, 23, 0],
+            [7, 20, 14, 25, 23, 13, 10, 8, 4, 17, 24, 3, 19, 21, 12, 18, 16, 9, 2, 5, 22, 11, 1, 6, 0],
+            [22, 9, 10, 2, 24, 15, 6, 14, 16, 18, 5, 25, 11, 8, 23, 4, 3, 1, 21, 20, 7, 12, 13, 17, 0],
+            [19, 25, 7, 6, 15, 14, 12, 18, 2, 16, 20, 13, 24, 10, 22, 3, 17, 8, 5, 4, 9, 1, 23, 11, 0],
+            [20, 2, 18, 23, 3, 24, 5, 1, 13, 9, 4, 6, 15, 16, 19, 21, 7, 10, 11, 14, 8, 17, 12, 25, 0],
+            [17, 8, 5, 1, 13, 20, 11, 4, 10, 3, 25, 12, 21, 14, 9, 22, 23, 6, 18, 2, 24, 7, 19, 15, 0],
+            [11, 24, 12, 10, 9, 21, 8, 22, 23, 25, 3, 7, 5, 17, 18, 1, 20, 16, 19, 15, 6, 13, 14, 4, 2],
+            [14, 21, 16, 22, 4, 19, 17, 6, 7, 15, 11, 2, 1, 23, 8, 25, 9, 13, 24, 12, 10, 20, 5, 3, 18],
+            [23, 13, 15, 24, 18, 3, 9, 16, 8, 14, 7, 19, 17, 22, 25, 5, 11, 20, 6, 21, 12, 2, 4, 10, 1],
+            [2, 7, 17, 11, 22, 12, 4, 23, 25, 13, 21, 8, 18, 5, 6, 9, 1, 14, 10, 16, 3, 15, 20, 19, 24],
+            [3, 4, 20, 14, 25, 6, 24, 5, 19, 21, 16, 1, 2, 9, 10, 17, 15, 12, 7, 23, 11, 8, 22, 18, 13],
+            [8, 16, 19, 9, 5, 1, 2, 15, 17, 10, 12, 4, 20, 11, 13, 24, 25, 3, 22, 18, 23, 21, 6, 7, 14],
+            [10, 12, 1, 21, 6, 11, 18, 20, 22, 7, 15, 23, 14, 24, 3, 2, 19, 4, 13, 8, 17, 25, 16, 5, 9]]
+solve(veryhard)
+# pprint(veryhard)
+
+assert [[6, 19, 24, 15, 11, 16, 7, 3, 20, 22, 2, 18, 23, 12, 14, 8, 10, 17, 1, 13, 25, 5, 9, 21, 4],
+            [1, 3, 23, 7, 8, 10, 25, 17, 21, 24, 19, 5, 13, 4, 15, 20, 14, 18, 12, 9, 16, 6, 2, 22, 11],
+            [25, 18, 22, 16, 17, 8, 14, 2, 11, 12, 1, 10, 9, 20, 21, 19, 6, 5, 4, 3, 15, 23, 24, 13, 7],
+            [13, 5, 2, 12, 20, 18, 15, 9, 1, 4, 22, 24, 3, 6, 7, 23, 21, 25, 16, 11, 19, 14, 10, 8, 17],
+            [21, 10, 9, 4, 14, 23, 13, 19, 6, 5, 17, 16, 8, 25, 11, 7, 2, 22, 15, 24, 20, 3, 18, 1, 12],
+            [9, 23, 25, 3, 21, 4, 22, 13, 12, 11, 10, 15, 7, 18, 24, 14, 5, 2, 17, 19, 1, 16, 8, 20, 6],
+            [24, 14, 4, 20, 19, 17, 21, 25, 3, 6, 8, 11, 16, 13, 1, 12, 18, 15, 23, 10, 2, 22, 7, 9, 5],
+            [16, 15, 6, 8, 2, 5, 1, 10, 14, 23, 9, 17, 22, 19, 4, 13, 24, 7, 20, 25, 21, 18, 11, 12, 3],
+            [12, 1, 13, 17, 7, 2, 19, 24, 18, 20, 6, 21, 25, 3, 5, 16, 8, 11, 9, 22, 4, 10, 15, 14, 23],
+            [5, 22, 11, 18, 10, 9, 16, 7, 15, 8, 23, 14, 12, 2, 20, 6, 4, 21, 3, 1, 13, 19, 17, 24, 25],
+            [4, 11, 3, 19, 12, 7, 23, 21, 5, 1, 13, 20, 6, 15, 16, 10, 22, 24, 14, 17, 18, 9, 25, 2, 8],
+            [18, 17, 8, 13, 1, 22, 3, 11, 24, 19, 14, 9, 10, 7, 2, 15, 12, 23, 25, 6, 5, 4, 21, 16, 20],
+            [15, 6, 21, 5, 16, 25, 20, 12, 9, 2, 18, 22, 4, 1, 17, 11, 13, 19, 8, 7, 14, 24, 3, 23, 10],
+            [7, 20, 14, 25, 23, 13, 10, 8, 4, 17, 24, 3, 19, 21, 12, 18, 16, 9, 2, 5, 22, 11, 1, 6, 15],
+            [22, 9, 10, 2, 24, 15, 6, 14, 16, 18, 5, 25, 11, 8, 23, 4, 3, 1, 21, 20, 7, 12, 13, 17, 19],
+            [19, 25, 7, 6, 15, 14, 12, 18, 2, 16, 20, 13, 24, 10, 22, 3, 17, 8, 5, 4, 9, 1, 23, 11, 21],
+            [20, 2, 18, 23, 3, 24, 5, 1, 13, 9, 4, 6, 15, 16, 19, 21, 7, 10, 11, 14, 8, 17, 12, 25, 22],
+            [17, 8, 5, 1, 13, 20, 11, 4, 10, 3, 25, 12, 21, 14, 9, 22, 23, 6, 18, 2, 24, 7, 19, 15, 16],
+            [11, 24, 12, 10, 9, 21, 8, 22, 23, 25, 3, 7, 5, 17, 18, 1, 20, 16, 19, 15, 6, 13, 14, 4, 2],
+            [14, 21, 16, 22, 4, 19, 17, 6, 7, 15, 11, 2, 1, 23, 8, 25, 9, 13, 24, 12, 10, 20, 5, 3, 18],
+            [23, 13, 15, 24, 18, 3, 9, 16, 8, 14, 7, 19, 17, 22, 25, 5, 11, 20, 6, 21, 12, 2, 4, 10, 1],
+            [2, 7, 17, 11, 22, 12, 4, 23, 25, 13, 21, 8, 18, 5, 6, 9, 1, 14, 10, 16, 3, 15, 20, 19, 24],
+            [3, 4, 20, 14, 25, 6, 24, 5, 19, 21, 16, 1, 2, 9, 10, 17, 15, 12, 7, 23, 11, 8, 22, 18, 13],
+            [8, 16, 19, 9, 5, 1, 2, 15, 17, 10, 12, 4, 20, 11, 13, 24, 25, 3, 22, 18, 23, 21, 6, 7, 14],
+            [10, 12, 1, 21, 6, 11, 18, 20, 22, 7, 15, 23, 14, 24, 3, 2, 19, 4, 13, 8, 17, 25, 16, 5, 9]] == veryhard
