@@ -2,10 +2,7 @@ import csv
 import random
 
 def parse(current_path, file, size):
-	sudoku = [[0 for x in range(size*size)] for y in range(size*size)]
-	print(current_path)
-	print(file)
-	# join(current_path,file)
+	sudoku = [[0 for x in range(size*size)] for y in range(size*size)]		
 	with open(current_path+"/"+file, 'rt') as f:
 		reader = csv.reader(f)
 		for row in reader:

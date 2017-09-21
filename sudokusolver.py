@@ -51,18 +51,18 @@ def sudoku_clauses(size):
 
 
     if size == 4:
-        print(size)
+        # print(size)
         for i in 1, 3:
             for j in 1, 3:
                 valid([(i + k % 2, j + k // 2) for k in range(size)])
-        # assert len(res) == (size**2) * (1 + 36) + 27 * 324
-        print(len(res))
+        assert len(res) == 400
+        # print(len(res))
     elif size == 9:
         # ensure 3x3 sub-grids "regions" have distinct values
         for i in 1, 4, 7:
             for j in 1, 4 ,7:
                 valid([(i + k % 3, j + k // 3) for k in range(size)])
-        print(len(res))
+        # print(len(res))
         assert len(res) == (size**2) * (1 + 36) + 27 * 324
     elif size == 16:
         for i in 1, 5, 9, 13:
@@ -107,22 +107,21 @@ def solve(grid):
     # print(out)
     stats = parse_stats_output(out)
 
-    sol = set(pycosat.solve(clauses, verbose=1))
-    def read_cell(i, j):
-        # return the digit of cell i, j according to the solution
-        for d in range(1, (size+1)):
-            if v(i, j, d, size) in sol:
-                return d
-
-    for i in range(1, (size+1)):
-        for j in range(1, (size+1)):
-            grid[i - 1][j - 1] = read_cell(i, j)
+    # sol = set(pycosat.solve(clauses, verbose=1))
+    # def read_cell(i, j):
+    #     # return the digit of cell i, j according to the solution
+    #     for d in range(1, (size+1)):
+    #         if v(i, j, d, size) in sol:
+    #             return d
+    #
+    # for i in range(1, (size+1)):
+    #     for j in range(1, (size+1)):
+    #         grid[i - 1][j - 1] = read_cell(i, j)
 
     return stats
 
 def parse_stats_output(output_str):
-    stats = np.array(list(filter(lambda x: x != "" and is_number(x), output_str.decode().split(" ")))[-10:]).astype(np.float)
-    return stats
+    return np.append(np.array(list(filter(lambda x: x != "" and is_number(x), output_str.decode().split(" ")))[-10:]).astype(np.float), [0])
 
 def is_number(s):
     try:
