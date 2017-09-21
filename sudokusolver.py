@@ -4,6 +4,8 @@ The implementation of this Sudoku solver is based on the paper:
     https://www.lri.fr/~conchon/mpri/weber.pdf
 """
 import pycosat
+import subprocess
+import numpy as np
 from pprint import pprint
 
 def v(i, j, d, size):
@@ -97,16 +99,15 @@ def solve(grid):
                 clauses.append([v(i, j, d, size)])
 
     # solve the SAT problem using subprocess to capture output as string
-    # temp_str = "cnf = " + repr(clauses) + ";"
-    #import subprocess
-    #proc = subprocess.Popen(["python", "-c",
-    #    temp_str + "import pycosat;pycosat.solve(cnf,verbose=5);"],
-    #    stdout=subprocess.PIPE)
-    #out = proc.communicate()[0]
-    #print(out)
+    temp_str = "cnf = " + repr(clauses) + ";"
+    proc = subprocess.Popen(["python", "-c",
+       temp_str + "import pycosat;pycosat.solve(cnf,verbose=1);"],
+       stdout=subprocess.PIPE)
+    out = proc.communicate()[0]
+    # print(out)
+    stats = parse_stats_output(out)
 
     sol = set(pycosat.solve(clauses, verbose=1))
-
     def read_cell(i, j):
         # return the digit of cell i, j according to the solution
         for d in range(1, (size+1)):
@@ -117,7 +118,18 @@ def solve(grid):
         for j in range(1, (size+1)):
             grid[i - 1][j - 1] = read_cell(i, j)
 
+    return stats
 
+def parse_stats_output(output_str):
+    stats = np.array(list(filter(lambda x: x != "" and is_number(x), output_str.decode().split(" ")))[-10:]).astype(np.float)
+    return stats
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 #normal = [[1, 2, 3, 0, 0, 0, 0, 0, 0],
 #        [0, 0, 0, 0, 0, 0, 0, 0, 3],
