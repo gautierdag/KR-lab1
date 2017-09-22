@@ -68,7 +68,7 @@ def sudoku_clauses(size):
         for i in 1, 5, 9, 13:
             for j in 1, 5, 9, 13:
                 valid([(i + k % 4, j + k // 4) for k in range(size)])
-        print(len(res))
+        assert len(res) == 123136        
     elif size == 25:
         for i in 1, 6, 11, 16, 21:
             for j in 1, 6, 11, 16, 21:
@@ -99,11 +99,14 @@ def solve(grid):
                 clauses.append([v(i, j, d, size)])
 
     # solve the SAT problem using subprocess to capture output as string
+    # print(clauses)
+    # with open('temp_clauses.txt','wb') as f:
+    np.save("temp_clauses", clauses)
     temp_str = "cnf = " + repr(clauses) + ";"
-    proc = subprocess.Popen(["python", "-c",
-       temp_str + "import pycosat;pycosat.solve(cnf,verbose=1);"],
+    proc = subprocess.Popen(["python", "solve_script.py"],
        stdout=subprocess.PIPE)
     out = proc.communicate()[0]
+
     # print(out)
     stats = parse_stats_output(out)
 

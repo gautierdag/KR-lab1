@@ -28,7 +28,7 @@ def main():
     sdk_type_index = 0
     count = 0
     # print(dirs)
-    for sudokuType in [dirs[1]]:
+    for sudokuType in [dirs[2]]:
         current_path = join(dir_path, sudokuType)
         onlyfiles = [f for f in listdir(current_path) if isfile(join(current_path, f))];
         TYPE_STATS = np.zeros((len(percentages), 11))

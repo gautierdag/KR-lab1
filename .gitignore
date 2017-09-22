@@ -1,3 +1,4 @@
 scraped/
 .DS_Store
 __pycache__/
+temp_clauses.npy
