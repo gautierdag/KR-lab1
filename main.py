@@ -48,14 +48,19 @@ def main():
                     # if original != sudokuWith0:
                         # temp_STATS[p][10] = 1.0
 
-                TYPE_STATS = temp_STATS+TYPE_STATS
+                TYPE_STATS = (temp_STATS*(1/total))+TYPE_STATS
                 count += 1
                 print("Processed: {0} out of {1}".format(count, total))
+                if count%5 == 0:
+                    print("Saving Current Progress")
+                    with open('results.csv','wb') as f:
+                        np.savetxt(f, TYPE_STATS, delimiter=",")
 
-
-            TYPE_STATS = TYPE_STATS/count
+            # TYPE_STATS = TYPE_STATS/count
             ALL_STATS[sdk_type_index] = TYPE_STATS
         # sdk_type_index += 1
+    with open('results.csv','wb') as f:
+        np.savetxt(f, ALL_STATS[0], delimiter=",")
 
     #Print the Stats for 2by2
     # fig, ax = plt.subplots(5,2, sharex='col')
@@ -96,8 +101,7 @@ def main():
 
     # ALL_STATS.tofile('results.txt',sep=",",format="%s")
 
-    with open('results.csv','wb') as f:
-        np.savetxt(f, ALL_STATS[0], delimiter=",")
+
 
 
 if __name__ == "__main__":
