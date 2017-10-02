@@ -16,13 +16,13 @@ from sudokusolver import solve
 from readSudokus import parse, removePercentage
 import matplotlib.pyplot as plt
 
-NUMBER_OF_SUDOKUS_PER_SIZE = 5
+NUMBER_OF_SUDOKUS_PER_SIZE = 10
 KNOWN_PERCENTAGE_INTERVAL = 0.1
 #Show graph results of all runs
-SHOW_GRAPH = True
+SHOW_GRAPH = False
 #save results to csv - we ran each size separately for the experiment
 # so this is not set up to save results for all sizes
-SAVE_RESULTS = False
+SAVE_RESULTS = True
 
 def main():
     pp = pprint.PrettyPrinter(indent=4)
@@ -30,7 +30,7 @@ def main():
     dir_path = join(os.path.dirname(currentDir), "puzzles")
     dirs = [d for d in os.listdir(dir_path) if os.path.isdir(os.path.join(dir_path, d))]
 
-    percentages = np.arange(0.2, 1, KNOWN_PERCENTAGE_INTERVAL) #the percentages of known numbers on the grid
+    percentages = np.arange(0.35, 0.4, KNOWN_PERCENTAGE_INTERVAL) #the percentages of known numbers on the grid
     ALL_STATS = np.zeros((4, len(percentages), 10))
     sdk_type_index = 0
 
@@ -38,7 +38,7 @@ def main():
         print("Number of Sudokus out of range, select <= 4000")
         return
     # print(dirs)
-    for sudokuType in dirs:
+    for sudokuType in [dirs[3]]:
         print("Processing sudokus of size : {0}".format(sudokuType))
         current_path = join(dir_path, sudokuType)
         onlyfiles = [f for f in listdir(current_path) if isfile(join(current_path, f))];
@@ -60,18 +60,13 @@ def main():
             print("Processed: {0} out of {1}".format(count, total))
 
             #saving results while running (note this only will only save results for the current sdk_type_index)
-            if count%5 == 0 and SAVE_RESULTS:
+            if (count%5 == 0 or count == total) and SAVE_RESULTS:
                 print("Saving Current Progress")
-                with open('results.csv','wb') as f:
+                with open('resultsSudoku'+str(sudokuType)+'.csv','wb') as f:
                     np.savetxt(f, TYPE_STATS, delimiter=",")
 
             ALL_STATS[sdk_type_index] = TYPE_STATS
         sdk_type_index += 1
-
-    #Save Results of sdk_type_index:
-    if SAVE_RESULTS
-        with open('results.csv','wb') as f:
-            np.savetxt(f, ALL_STATS[sdk_type_index], delimiter=",")
 
     #Print the Stats:
     if SHOW_GRAPH:
