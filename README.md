@@ -2,7 +2,7 @@
 Knowledge Representation - UvA - lab1
 Authors: Juan Buhagiar Gautier Dagan
 
-##Details:
+## Details:
 
 This is our repo for the 2017 KR class - Sudoku Lab.
 To run experiment, please edit the MAIN variables in main.py ()
